@@ -6,7 +6,7 @@ import time
 import threading
 from datetime import datetime
 
-TOKEN = "8625146440:AAE0rLAljtHloJg2waHX_Z8-qeQF5cJTOzE"
+TOKEN = "8625146440:AAHVuOM-RV9zUYc4yMhoysauYJKWzT0Zu0A"
 bot = telebot.TeleBot(TOKEN)
 DATA_FILE = "ots_data.json"
 
