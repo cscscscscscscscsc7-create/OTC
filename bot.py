@@ -265,7 +265,6 @@ def worker_panel(msg):
         telebot.types.InlineKeyboardButton("🏆 Топ", callback_data="worker_top"),
         telebot.types.InlineKeyboardButton("📈 Статистика", callback_data="worker_stats"),
         telebot.types.InlineKeyboardButton("⛔ Чёрный список", callback_data="worker_blacklist"),
-        telebot.types.InlineKeyboardButton("💰 Начислить баланс", callback_data="worker_add_balance"),
         telebot.types.InlineKeyboardButton("📨 Рассылка", callback_data="worker_mailing"),
         telebot.types.InlineKeyboardButton("❌ Отменить сделку", callback_data="worker_cancel_deal"),
         telebot.types.InlineKeyboardButton("➕ Добавить в ЧС", callback_data="worker_blacklist_add"),
@@ -716,25 +715,6 @@ def handle_all_callbacks(call):
             bot.send_message(user_id, text, reply_markup=kb, parse_mode='HTML')
             return
 
-        if data == "worker_add_balance":
-            kb = telebot.types.InlineKeyboardMarkup(row_width=2)
-            kb.add(
-                telebot.types.InlineKeyboardButton("💎 TON", callback_data="add_bal_TON"),
-                telebot.types.InlineKeyboardButton("💵 USDT", callback_data="add_bal_USDT"),
-                telebot.types.InlineKeyboardButton("₿ BTC", callback_data="add_bal_BTC"),
-                telebot.types.InlineKeyboardButton("⭐ Stars", callback_data="add_bal_Stars")
-            )
-            kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
-            safe_edit(call.message.chat.id, call.message.message_id, "💰 Выберите валюту для начисления:", reply_markup=kb, parse_mode='HTML')
-            return
-
-        if data.startswith("add_bal_"):
-            currency = data.split("_")[2]
-            user_temp[user_id] = {"currency": currency, "action": "add_balance"}
-            bot.send_message(user_id, f"💰 Введите сумму в {currency}:", reply_markup=back(), parse_mode='HTML')
-            bot.register_next_step_handler(call.message, handle_add_balance_amount)
-            return
-
         if data == "worker_mailing":
             bot.send_message(user_id, "📨 Введите текст рассылки:", reply_markup=back(), parse_mode='HTML')
             bot.register_next_step_handler(call.message, handle_mailing)
@@ -929,23 +909,6 @@ def review_text_input(msg, deal_id, rating):
         save()
         bot.send_message(user_id, "✅ Отзыв оставлен! Спасибо.", reply_markup=back())
         bot.send_message(seller_id, f"⭐ Новый отзыв!\n👤 @{users[user_id].get('username', 'unknown')}\n⭐ {rating}/5\n💬 {text}", reply_markup=back())
-
-def handle_add_balance_amount(msg):
-    user_id = get_uid(msg)
-    ensure_user(user_id)
-    try:
-        amount = float(msg.text.replace(',', '.'))
-        if amount <= 0:
-            bot.send_message(user_id, "❌ >0", reply_markup=back())
-            return
-    except:
-        bot.send_message(user_id, "❌ Введите число", reply_markup=back())
-        return
-    currency = user_temp[user_id]["currency"]
-    add_balance(user_id, currency, amount)
-    if user_id in user_temp:
-        del user_temp[user_id]
-    bot.send_message(user_id, f"✅ Начислено {amount} {currency}.\n\n{get_balance_text(user_id)}", reply_markup=back())
 
 def handle_mailing(msg):
     user_id = get_uid(msg)
