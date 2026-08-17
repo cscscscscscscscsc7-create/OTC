@@ -72,7 +72,7 @@ def ensure_user(user_id):
             "username": None,
             "total_deals": 0,
             "rating": 0,
-            "balance": {"TON": 0, "USDT": 0, "BTC": 0, "Stars": 0}
+            "balance": {"TON": 0, "USDT": 0, "BTC": 0, "Stars": 0, "NFT": 0}
         }
         save()
 
@@ -85,7 +85,8 @@ def get_balance_text(user_id):
     text += f"💎 TON: {bal.get('TON', 0)}\n"
     text += f"💵 USDT: {bal.get('USDT', 0)}\n"
     text += f"₿ BTC: {bal.get('BTC', 0)}\n"
-    text += f"⭐ Stars: {bal.get('Stars', 0)}"
+    text += f"⭐ Stars: {bal.get('Stars', 0)}\n"
+    text += f"🖼 NFT: {bal.get('NFT', 0)}"
     return text
 
 def add_balance(user_id, currency, amount):
@@ -159,6 +160,8 @@ def format_deal_short(deal_id):
     if d.get('seller'):
         seller_name = users.get(d['seller'], {}).get('username', d['seller'])
         text += f"👤 Продавец: @{seller_name}\n"
+    if d.get('nft_link'):
+        text += f"🖼 NFT: {d['nft_link']}\n"
     return text
 
 def get_deal_keyboard(deal_id, user_id):
@@ -311,7 +314,8 @@ def handle_all_callbacks(call):
             telebot.types.InlineKeyboardButton("💎 TON", callback_data="nd_seller_TON"),
             telebot.types.InlineKeyboardButton("💵 USDT", callback_data="nd_seller_USDT"),
             telebot.types.InlineKeyboardButton("₿ BTC", callback_data="nd_seller_BTC"),
-            telebot.types.InlineKeyboardButton("⭐ Stars", callback_data="nd_seller_Stars")
+            telebot.types.InlineKeyboardButton("⭐ Stars", callback_data="nd_seller_Stars"),
+            telebot.types.InlineKeyboardButton("🖼 NFT", callback_data="nd_seller_NFT")
         )
         kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="new_deal"))
         safe_edit(call.message.chat.id, call.message.message_id, "📦 Выберите валюту сделки:", reply_markup=kb, parse_mode='HTML')
@@ -319,9 +323,13 @@ def handle_all_callbacks(call):
 
     if data.startswith("nd_seller_"):
         currency = data.split("_")[2]
-        user_temp[user_id] = {"role": "seller", "currency": currency, "step": "amount"}
-        bot.send_message(user_id, f"💱 {currency}\n💰 Введите сумму:", reply_markup=back(), parse_mode='HTML')
-        bot.register_next_step_handler(call.message, nd_seller_amount)
+        user_temp[user_id] = {"role": "seller", "currency": currency}
+        if currency == "NFT":
+            bot.send_message(user_id, "🖼 Введите ссылку на NFT:", reply_markup=back(), parse_mode='HTML')
+            bot.register_next_step_handler(call.message, nd_seller_nft_link)
+        else:
+            bot.send_message(user_id, f"💱 {currency}\n💰 Введите сумму:", reply_markup=back(), parse_mode='HTML')
+            bot.register_next_step_handler(call.message, nd_seller_amount)
         return
 
     if data == "new_deal_buyer":
@@ -333,7 +341,8 @@ def handle_all_callbacks(call):
             telebot.types.InlineKeyboardButton("💎 TON", callback_data="nd_buyer_TON"),
             telebot.types.InlineKeyboardButton("💵 USDT", callback_data="nd_buyer_USDT"),
             telebot.types.InlineKeyboardButton("₿ BTC", callback_data="nd_buyer_BTC"),
-            telebot.types.InlineKeyboardButton("⭐ Stars", callback_data="nd_buyer_Stars")
+            telebot.types.InlineKeyboardButton("⭐ Stars", callback_data="nd_buyer_Stars"),
+            telebot.types.InlineKeyboardButton("🖼 NFT", callback_data="nd_buyer_NFT")
         )
         kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="new_deal"))
         safe_edit(call.message.chat.id, call.message.message_id, "📦 Выберите валюту сделки:", reply_markup=kb, parse_mode='HTML')
@@ -341,9 +350,13 @@ def handle_all_callbacks(call):
 
     if data.startswith("nd_buyer_"):
         currency = data.split("_")[2]
-        user_temp[user_id] = {"role": "buyer", "currency": currency, "step": "amount"}
-        bot.send_message(user_id, f"💱 {currency}\n💰 Введите сумму:", reply_markup=back(), parse_mode='HTML')
-        bot.register_next_step_handler(call.message, nd_buyer_amount)
+        user_temp[user_id] = {"role": "buyer", "currency": currency}
+        if currency == "NFT":
+            bot.send_message(user_id, "🖼 Введите ссылку на NFT:", reply_markup=back(), parse_mode='HTML')
+            bot.register_next_step_handler(call.message, nd_buyer_nft_link)
+        else:
+            bot.send_message(user_id, f"💱 {currency}\n💰 Введите сумму:", reply_markup=back(), parse_mode='HTML')
+            bot.register_next_step_handler(call.message, nd_buyer_amount)
         return
 
     if data == "sell_start":
@@ -355,7 +368,8 @@ def handle_all_callbacks(call):
             telebot.types.InlineKeyboardButton("💎 TON", callback_data="sell_cur_TON"),
             telebot.types.InlineKeyboardButton("💵 USDT", callback_data="sell_cur_USDT"),
             telebot.types.InlineKeyboardButton("₿ BTC", callback_data="sell_cur_BTC"),
-            telebot.types.InlineKeyboardButton("⭐ Stars", callback_data="sell_cur_Stars")
+            telebot.types.InlineKeyboardButton("⭐ Stars", callback_data="sell_cur_Stars"),
+            telebot.types.InlineKeyboardButton("🖼 NFT", callback_data="sell_cur_NFT")
         )
         kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
         safe_edit(call.message.chat.id, call.message.message_id, "📦 Выберите валюту:", reply_markup=kb, parse_mode='HTML')
@@ -363,9 +377,13 @@ def handle_all_callbacks(call):
 
     if data.startswith("sell_cur_"):
         currency = data.split("_")[2]
-        user_temp[user_id] = {"role": "seller_ad", "currency": currency, "step": "amount"}
-        bot.send_message(user_id, f"💱 {currency}\n💰 Введите сумму:", reply_markup=back(), parse_mode='HTML')
-        bot.register_next_step_handler(call.message, sell_amount_input)
+        user_temp[user_id] = {"role": "seller_ad", "currency": currency}
+        if currency == "NFT":
+            bot.send_message(user_id, "🖼 Введите ссылку на NFT:", reply_markup=back(), parse_mode='HTML')
+            bot.register_next_step_handler(call.message, sell_nft_link)
+        else:
+            bot.send_message(user_id, f"💱 {currency}\n💰 Введите сумму:", reply_markup=back(), parse_mode='HTML')
+            bot.register_next_step_handler(call.message, sell_amount_input)
         return
 
     if data == "market":
@@ -376,7 +394,10 @@ def handle_all_callbacks(call):
         text = "🏪 Маркет\n\n"
         for ad in active_ads[:10]:
             seller_name = users.get(ad['seller'], {}).get('username', ad['seller'])
-            text += f"🆔 #{ad['id']}\n💱 {ad['currency']} — {ad['amount']} шт.\n👤 @{seller_name}\n\n"
+            text += f"🆔 #{ad['id']}\n💱 {ad['currency']} — {ad['amount']} шт.\n"
+            if ad.get('nft_link'):
+                text += f"🖼 NFT: {ad['nft_link']}\n"
+            text += f"👤 @{seller_name}\n\n"
         kb = telebot.types.InlineKeyboardMarkup()
         for ad in active_ads[:5]:
             kb.add(telebot.types.InlineKeyboardButton(f"🛒 Купить #{ad['id']}", callback_data=f"buy_ad_{ad['id']}"))
@@ -413,6 +434,7 @@ def handle_all_callbacks(call):
             "buyer": user_id,
             "seller": ad["seller"],
             "ad_id": ad_id,
+            "nft_link": ad.get("nft_link"),
             "created_at": datetime.now().isoformat()
         }
         if user_id not in users:
@@ -429,7 +451,10 @@ def handle_all_callbacks(call):
         kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
         bot.send_message(user_id, text, reply_markup=kb, parse_mode='HTML')
 
-        seller_text = f"📦 Продажа #{deal_id}\n\n👤 Покупатель: @{users.get(user_id, {}).get('username', user_id)}\n💱 {ad['currency']}\n📦 {ad['amount']} шт.\n\n🔗 {link}"
+        seller_text = f"📦 Продажа #{deal_id}\n\n👤 Покупатель: @{users.get(user_id, {}).get('username', user_id)}\n💱 {ad['currency']}\n📦 {ad['amount']} шт.\n"
+        if ad.get('nft_link'):
+            seller_text += f"🖼 NFT: {ad['nft_link']}\n"
+        seller_text += f"\n🔗 {link}"
         kb_seller = telebot.types.InlineKeyboardMarkup()
         kb_seller.add(telebot.types.InlineKeyboardButton("🔗 Перейти", url=link))
         kb_seller.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
@@ -742,6 +767,167 @@ def handle_all_callbacks(call):
 
         return
 
+def nd_seller_nft_link(msg):
+    user_id = get_uid(msg)
+    nft_link = msg.text.strip()
+    user_temp[user_id]["nft_link"] = nft_link
+    kb = telebot.types.InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        telebot.types.InlineKeyboardButton("💎 TON", callback_data=f"nft_pay_{user_id}_TON"),
+        telebot.types.InlineKeyboardButton("💵 USDT", callback_data=f"nft_pay_{user_id}_USDT"),
+        telebot.types.InlineKeyboardButton("₿ BTC", callback_data=f"nft_pay_{user_id}_BTC"),
+        telebot.types.InlineKeyboardButton("⭐ Stars", callback_data=f"nft_pay_{user_id}_Stars")
+    )
+    kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
+    bot.send_message(user_id, "💰 В какой валюте оплата?", reply_markup=kb, parse_mode='HTML')
+
+def nd_buyer_nft_link(msg):
+    user_id = get_uid(msg)
+    nft_link = msg.text.strip()
+    user_temp[user_id]["nft_link"] = nft_link
+    kb = telebot.types.InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        telebot.types.InlineKeyboardButton("💎 TON", callback_data=f"nft_pay_{user_id}_TON"),
+        telebot.types.InlineKeyboardButton("💵 USDT", callback_data=f"nft_pay_{user_id}_USDT"),
+        telebot.types.InlineKeyboardButton("₿ BTC", callback_data=f"nft_pay_{user_id}_BTC"),
+        telebot.types.InlineKeyboardButton("⭐ Stars", callback_data=f"nft_pay_{user_id}_Stars")
+    )
+    kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
+    bot.send_message(user_id, "💰 В какой валюте оплата?", reply_markup=kb, parse_mode='HTML')
+
+def sell_nft_link(msg):
+    user_id = get_uid(msg)
+    nft_link = msg.text.strip()
+    user_temp[user_id]["nft_link"] = nft_link
+    kb = telebot.types.InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        telebot.types.InlineKeyboardButton("💎 TON", callback_data=f"nft_pay_{user_id}_TON"),
+        telebot.types.InlineKeyboardButton("💵 USDT", callback_data=f"nft_pay_{user_id}_USDT"),
+        telebot.types.InlineKeyboardButton("₿ BTC", callback_data=f"nft_pay_{user_id}_BTC"),
+        telebot.types.InlineKeyboardButton("⭐ Stars", callback_data=f"nft_pay_{user_id}_Stars")
+    )
+    kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
+    bot.send_message(user_id, "💰 В какой валюте оплата?", reply_markup=kb, parse_mode='HTML')
+
+def nd_seller_amount(msg):
+    user_id = get_uid(msg)
+    ensure_user(user_id)
+    try:
+        amount = float(msg.text.replace(',', '.'))
+        if amount <= 0:
+            bot.send_message(user_id, "❌ Сумма должна быть больше 0", reply_markup=back())
+            return
+    except:
+        bot.send_message(user_id, "❌ Введите число", reply_markup=back())
+        return
+    currency = user_temp[user_id]["currency"]
+    payment_currency = user_temp[user_id].get("payment_currency", currency)
+    nft_link = user_temp[user_id].get("nft_link")
+    
+    deal_id = random.randint(10000, 99999)
+    deal_id_str = str(deal_id)
+    deals[deal_id_str] = {
+        "id": deal_id,
+        "creator": user_id,
+        "role": "seller",
+        "status": "waiting_payment",
+        "amount": amount,
+        "currency": currency if currency != "NFT" else payment_currency,
+        "payment_currency": payment_currency,
+        "buyer": None,
+        "seller": user_id,
+        "nft_link": nft_link,
+        "created_at": datetime.now().isoformat()
+    }
+    if deal_id_str not in users[user_id]["deals"]:
+        users[user_id]["deals"].append(deal_id_str)
+    save()
+    if user_id in user_temp:
+        del user_temp[user_id]
+    link = deal_link(deal_id_str)
+    text = f"✅ Сделка #{deal_id}\n\n{format_deal_short(deal_id_str)}\n\n📤 Отправьте ссылку покупателю:\n{link}"
+    kb = telebot.types.InlineKeyboardMarkup()
+    kb.add(telebot.types.InlineKeyboardButton("🔗 Поделиться", url=link))
+    kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
+    bot.send_message(user_id, text, reply_markup=kb, parse_mode='HTML')
+
+def nd_buyer_amount(msg):
+    user_id = get_uid(msg)
+    ensure_user(user_id)
+    try:
+        amount = float(msg.text.replace(',', '.'))
+        if amount <= 0:
+            bot.send_message(user_id, "❌ Сумма должна быть больше 0", reply_markup=back())
+            return
+    except:
+        bot.send_message(user_id, "❌ Введите число", reply_markup=back())
+        return
+    currency = user_temp[user_id]["currency"]
+    payment_currency = user_temp[user_id].get("payment_currency", currency)
+    nft_link = user_temp[user_id].get("nft_link")
+    
+    deal_id = random.randint(10000, 99999)
+    deal_id_str = str(deal_id)
+    deals[deal_id_str] = {
+        "id": deal_id,
+        "creator": user_id,
+        "role": "buyer",
+        "status": "waiting_seller",
+        "amount": amount,
+        "currency": currency if currency != "NFT" else payment_currency,
+        "payment_currency": payment_currency,
+        "buyer": user_id,
+        "seller": None,
+        "nft_link": nft_link,
+        "created_at": datetime.now().isoformat()
+    }
+    if deal_id_str not in users[user_id]["deals"]:
+        users[user_id]["deals"].append(deal_id_str)
+    save()
+    if user_id in user_temp:
+        del user_temp[user_id]
+    link = deal_link(deal_id_str)
+    text = f"✅ Сделка #{deal_id}\n\n{format_deal_short(deal_id_str)}\n\n📤 Отправьте ссылку продавцу:\n{link}"
+    kb = telebot.types.InlineKeyboardMarkup()
+    kb.add(telebot.types.InlineKeyboardButton("🔗 Поделиться", url=link))
+    kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
+    bot.send_message(user_id, text, reply_markup=kb, parse_mode='HTML')
+
+def sell_amount_input(msg):
+    user_id = get_uid(msg)
+    ensure_user(user_id)
+    try:
+        amount = float(msg.text.replace(',', '.'))
+        if amount <= 0:
+            bot.send_message(user_id, "❌ Сумма должна быть больше 0", reply_markup=back())
+            return
+    except:
+        bot.send_message(user_id, "❌ Введите число", reply_markup=back())
+        return
+    currency = user_temp[user_id]["currency"]
+    payment_currency = user_temp[user_id].get("payment_currency", currency)
+    nft_link = user_temp[user_id].get("nft_link")
+    
+    ad_id = random.randint(10000, 99999)
+    ad_data = {
+        "id": ad_id,
+        "seller": user_id,
+        "currency": currency if currency != "NFT" else payment_currency,
+        "amount": amount,
+        "status": "active",
+        "created_at": datetime.now().isoformat()
+    }
+    if nft_link:
+        ad_data["nft_link"] = nft_link
+    ads.append(ad_data)
+    save()
+    if user_id in user_temp:
+        del user_temp[user_id]
+    text = f"✅ Объявление #{ad_id}\n💱 {currency}\n📦 {amount} шт."
+    if nft_link:
+        text += f"\n🖼 NFT: {nft_link}"
+    bot.send_message(user_id, text, reply_markup=back(), parse_mode='HTML')
+
 def find_user_input(msg):
     user_id = get_uid(msg)
     query = msg.text.strip()
@@ -773,107 +959,6 @@ def find_user_input(msg):
     kb = telebot.types.InlineKeyboardMarkup()
     kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
     bot.send_message(user_id, text, reply_markup=kb, parse_mode='HTML')
-
-def nd_seller_amount(msg):
-    user_id = get_uid(msg)
-    ensure_user(user_id)
-    try:
-        amount = float(msg.text.replace(',', '.'))
-        if amount <= 0:
-            bot.send_message(user_id, "❌ Сумма должна быть больше 0", reply_markup=back())
-            return
-    except:
-        bot.send_message(user_id, "❌ Введите число", reply_markup=back())
-        return
-    currency = user_temp[user_id]["currency"]
-    deal_id = random.randint(10000, 99999)
-    deal_id_str = str(deal_id)
-    deals[deal_id_str] = {
-        "id": deal_id,
-        "creator": user_id,
-        "role": "seller",
-        "status": "waiting_payment",
-        "amount": amount,
-        "currency": currency,
-        "buyer": None,
-        "seller": user_id,
-        "created_at": datetime.now().isoformat()
-    }
-    if deal_id_str not in users[user_id]["deals"]:
-        users[user_id]["deals"].append(deal_id_str)
-    save()
-    if user_id in user_temp:
-        del user_temp[user_id]
-    link = deal_link(deal_id_str)
-    text = f"✅ Сделка #{deal_id}\n\n{format_deal_short(deal_id_str)}\n\n📤 Отправьте ссылку покупателю:\n{link}"
-    kb = telebot.types.InlineKeyboardMarkup()
-    kb.add(telebot.types.InlineKeyboardButton("🔗 Поделиться", url=link))
-    kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
-    bot.send_message(user_id, text, reply_markup=kb, parse_mode='HTML')
-
-def nd_buyer_amount(msg):
-    user_id = get_uid(msg)
-    ensure_user(user_id)
-    try:
-        amount = float(msg.text.replace(',', '.'))
-        if amount <= 0:
-            bot.send_message(user_id, "❌ Сумма должна быть больше 0", reply_markup=back())
-            return
-    except:
-        bot.send_message(user_id, "❌ Введите число", reply_markup=back())
-        return
-    currency = user_temp[user_id]["currency"]
-    deal_id = random.randint(10000, 99999)
-    deal_id_str = str(deal_id)
-    deals[deal_id_str] = {
-        "id": deal_id,
-        "creator": user_id,
-        "role": "buyer",
-        "status": "waiting_seller",
-        "amount": amount,
-        "currency": currency,
-        "buyer": user_id,
-        "seller": None,
-        "created_at": datetime.now().isoformat()
-    }
-    if deal_id_str not in users[user_id]["deals"]:
-        users[user_id]["deals"].append(deal_id_str)
-    save()
-    if user_id in user_temp:
-        del user_temp[user_id]
-    link = deal_link(deal_id_str)
-    text = f"✅ Сделка #{deal_id}\n\n{format_deal_short(deal_id_str)}\n\n📤 Отправьте ссылку продавцу:\n{link}"
-    kb = telebot.types.InlineKeyboardMarkup()
-    kb.add(telebot.types.InlineKeyboardButton("🔗 Поделиться", url=link))
-    kb.add(telebot.types.InlineKeyboardButton("◀ Назад", callback_data="back"))
-    bot.send_message(user_id, text, reply_markup=kb, parse_mode='HTML')
-
-def sell_amount_input(msg):
-    user_id = get_uid(msg)
-    ensure_user(user_id)
-    try:
-        amount = float(msg.text.replace(',', '.'))
-        if amount <= 0:
-            bot.send_message(user_id, "❌ Сумма должна быть больше 0", reply_markup=back())
-            return
-    except:
-        bot.send_message(user_id, "❌ Введите число", reply_markup=back())
-        return
-    currency = user_temp[user_id]["currency"]
-    ad_id = random.randint(10000, 99999)
-    ads.append({
-        "id": ad_id,
-        "seller": user_id,
-        "currency": currency,
-        "amount": amount,
-        "status": "active",
-        "created_at": datetime.now().isoformat()
-    })
-    save()
-    if user_id in user_temp:
-        del user_temp[user_id]
-    text = f"✅ Объявление #{ad_id}\n💱 {currency}\n📦 {amount} шт."
-    bot.send_message(user_id, text, reply_markup=back(), parse_mode='HTML')
 
 def review_rating_input(msg, deal_id):
     user_id = get_uid(msg)
